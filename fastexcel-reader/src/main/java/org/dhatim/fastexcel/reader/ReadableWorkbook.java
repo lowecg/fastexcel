@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Consumer;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 import javax.xml.stream.XMLInputFactory;
@@ -136,11 +137,32 @@ public class ReadableWorkbook implements Closeable {
     Stream<Row> openStream(Sheet sheet) throws IOException {
         try {
             InputStream inputStream = reader.getSheet(sheet.getId());
-            Stream<Row> stream = StreamSupport.stream(new RowSpliterator(this, inputStream), false);
-            return stream.onClose(asUncheckedRunnable(inputStream));
+            RowSpliterator rowSpliterator = new RowSpliterator(this, inputStream);
+
+            Stream<Row> stream = StreamSupport.stream(rowSpliterator, false);
+            return stream.onClose(() -> {
+                try {
+                    extractMergeCells(rowSpliterator.getReader(), sheet);
+                }
+                catch (XMLStreamException cause) {
+                    throw new RuntimeException(cause);
+                }
+                finally {
+                    asUncheckedRunnable(inputStream);
+                }
+            });
         } catch (XMLStreamException | InvalidFormatException e) {
             throw new IOException(e);
         }
+    }
+
+    private void extractMergeCells(SimpleXmlReader reader, Sheet sheet) throws XMLStreamException {
+        reader.forEach("mergeCell", "mergeCells", simpleXmlReader -> {
+            String ref = simpleXmlReader.getAttribute("ref");
+
+            sheet.addMergeCell(ref);
+        });
+
     }
 
     XMLInputFactory getXmlFactory() {

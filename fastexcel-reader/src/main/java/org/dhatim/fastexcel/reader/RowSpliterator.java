@@ -70,6 +70,13 @@ class RowSpliterator implements Spliterator<Row> {
     }
 
     private boolean hasNext() throws XMLStreamException {
+        // Spliterator sometime after JDK 8 calls this method an additional time after encountering the end element for
+        // sheetData. We do not want r.goTo() to be called again since it will consume the remainder of the sheet stream
+        //  and deny us mergedCells
+        if (r.isEndElement("sheetData")) {
+            return false;
+        }
+
         if (r.goTo(() -> r.isStartElement("row") || r.isEndElement("sheetData"))) {
             return "row".equals(r.getLocalName());
         } else {
@@ -247,4 +254,7 @@ class RowSpliterator implements Spliterator<Row> {
         }
     }
 
+    public SimpleXmlReader getReader() {
+        return r;
+    }
 }

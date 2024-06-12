@@ -16,6 +16,7 @@
 package org.dhatim.fastexcel.reader;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -26,6 +27,7 @@ public class Sheet {
     private final int index;
     private final String id;
     private final String name;
+    private final List<CellRangeAddress> mergeCells = new ArrayList<>();
 
     Sheet(ReadableWorkbook workbook, int index, String id, String name) {
         this.workbook = workbook;
@@ -56,4 +58,11 @@ public class Sheet {
         }
     }
 
+    public void addMergeCell(final String ref) {
+        mergeCells.add(CellRangeAddress.valueOf(ref));
+    }
+
+    public List<CellRangeAddress> getMergeCells() {
+        return mergeCells;
+    }
 }
